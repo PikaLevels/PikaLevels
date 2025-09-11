@@ -28,7 +28,7 @@ public class LeaderboardToggleCommand implements ICommand {
     public void processCommand(ICommandSender sender, String[] args) {
         com.notthatlonely.pikalevels.render.RenderHandler.toggleLeaderboard();
         boolean current = com.notthatlonely.pikalevels.render.RenderHandler.isLeaderboardEnabled();
-        sender.addChatMessage(new ChatComponentText("Pika Levels leaderboard is now " + (current ? "§aENABLED" : "§cDISABLED")));
+        sender.addChatMessage(new ChatComponentText("Pika Levels leaderboard is now " + (current ? "Â§aENABLED" : "Â§cDISABLED")));
     }
 
     @Override
