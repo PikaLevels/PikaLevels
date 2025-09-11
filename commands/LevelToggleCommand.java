@@ -28,7 +28,7 @@ public class LevelToggleCommand implements ICommand {
     public void processCommand(ICommandSender sender, String[] args) {
         com.notthatlonely.pikalevels.render.RenderHandler.toggleEnabled();
         boolean current = com.notthatlonely.pikalevels.render.RenderHandler.isEnabled();
-        sender.addChatMessage(new ChatComponentText("Pika Levels display is now " + (current ? "§aENABLED" : "§cDISABLED")));
+        sender.addChatMessage(new ChatComponentText("Pika Levels display is now " + (current ? "Â§aENABLED" : "Â§cDISABLED")));
     }
 
     @Override
