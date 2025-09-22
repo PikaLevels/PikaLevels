@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class RenderHandler {
+
     private final Minecraft mc = Minecraft.getMinecraft();
     private final Map<String, PikaClient.Result> cache = new ConcurrentHashMap<>();
     private final Map<String, Long> lastFetch = new ConcurrentHashMap<>();
@@ -40,7 +41,6 @@ public class RenderHandler {
     public static boolean isLeaderboardEnabled() {
         return leaderboardEnabled;
     }
-
 
     public RenderHandler() {
         new Thread(() -> {
@@ -83,17 +83,31 @@ public class RenderHandler {
         if (!(event.entity instanceof EntityOtherPlayerMP)) return;
 
         EntityOtherPlayerMP player = (EntityOtherPlayerMP) event.entity;
+        if (player.isSneaking() || player.isInvisible()) return;
+
         String name = player.getName();
         PikaClient.Result result = cache.get(name);
 
-        String level = (result != null) ? result.playerLevel : "N/A";
-        String guild = (result != null) ? result.guildDisplay : "N/A";
-        String text = "Lvl " + level + " | " + guild;
+        String level = "N/A";
+        String guild = "N/A";
+        int color = 0xAAAAAA;
 
-        renderText(text, event.x, event.y + player.height + 0.5, event.z);
+        if (result != null) {
+            if (result.nick) {
+                level = "NICK";
+                color = 0xAA00FF;
+            } else {
+                level = (result.playerLevel != null && !result.playerLevel.equals("N/A")) ? result.playerLevel : "N/A";
+                guild = (result.guildDisplay != null) ? result.guildDisplay : "N/A";
+                color = (level.equals("N/A")) ? 0xAAAAAA : result.rankColor;
+            }
+        }
+
+        String text = "Lvl " + level + " | " + guild;
+        renderText(text, event.x, event.y + player.height + 0.8, event.z, color); // Raised slightly
     }
 
-    private void renderText(String text, double x, double y, double z) {
+    private void renderText(String text, double x, double y, double z, int color) {
         RenderManager renderManager = mc.getRenderManager();
         float viewerYaw = renderManager.playerViewY;
         float viewerPitch = renderManager.playerViewX;
@@ -108,7 +122,7 @@ public class RenderHandler {
         GlStateManager.disableDepth();
 
         int width = mc.fontRendererObj.getStringWidth(text) / 2;
-        mc.fontRendererObj.drawString(text, -width, 0, 0xAAAAAA);
+        mc.fontRendererObj.drawString(text, -width, 0, color);
 
         GlStateManager.enableDepth();
         GlStateManager.enableLighting();
@@ -119,34 +133,85 @@ public class RenderHandler {
     public void onRenderOverlay(RenderGameOverlayEvent.Text event) {
         if (!enabled || !leaderboardEnabled || mc.theWorld == null || mc.thePlayer == null) return;
 
-        List<String> displayLines = mc.theWorld.playerEntities.stream()
+        List<ColoredLine> displayLines = mc.theWorld.playerEntities.stream()
                 .filter(e -> e instanceof EntityOtherPlayerMP)
                 .map(e -> (EntityOtherPlayerMP) e)
                 .map(player -> {
                     String name = player.getName();
                     PikaClient.Result result = cache.get(name);
-                    String level = (result != null) ? result.playerLevel : "N/A";
-                    return name + " - Lvl " + level;
+
+                    String displayName;
+                    int color;
+
+                    if (result == null) {
+                        displayName = name + " - Lvl N/A";
+                        color = 0xAAAAAA;
+                    } else if (result.nick) {
+                        displayName = name + " - NICK";
+                        color = 0xAA00FF;
+                    } else if (result.playerLevel == null || result.playerLevel.equals("N/A")) {
+                        displayName = name + " - Lvl N/A";
+                        color = 0xAAAAAA;
+                    } else {
+                        displayName = name + " - Lvl " + result.playerLevel;
+                        color = result.rankColor;
+                    }
+
+                    return new ColoredLine(displayName, color);
                 })
-                .sorted()
-                .limit(10)
+                .sorted((a, b) -> a.text.compareToIgnoreCase(b.text))
+                .limit(16) // Limit to 16 players
                 .collect(Collectors.toList());
 
-        int x = 10;
-        int y = mc.displayHeight / mc.gameSettings.guiScale / 4;
-        int boxWidth = 120;
-        int lineHeight = mc.fontRendererObj.FONT_HEIGHT + 2;
-        int boxHeight = displayLines.size() * lineHeight + 6;
+        int boxWidth = 140;
+        int lineHeight = mc.fontRendererObj.FONT_HEIGHT;
+        int boxHeight = displayLines.size() * lineHeight + 10;
 
-        drawRect(x - 4, y - 4, x + boxWidth + 4, y + boxHeight, 0x88000000);
+        int x = 10;
+        int screenHeight = mc.displayHeight / mc.gameSettings.guiScale;
+        int y = (screenHeight - boxHeight) / 2;
+
+        // Background
+        drawRect(x - 6, y - 6, x + boxWidth + 6, y + boxHeight + 6, 0x88000000);
+
+        // Dashed border
+        drawThinBorder(x - 6, y - 6, x + boxWidth + 6, y + boxHeight + 6, 0xFF000000);
 
         for (int i = 0; i < displayLines.size(); i++) {
-            String line = displayLines.get(i);
-            mc.fontRendererObj.drawStringWithShadow(line, x, y + i * lineHeight, 0xFFFFFF);
+            ColoredLine line = displayLines.get(i);
+            GlStateManager.pushMatrix();
+            GlStateManager.translate(x, y + i * lineHeight, 0);
+            GlStateManager.scale(0.8, 0.8, 1.0);
+            mc.fontRendererObj.drawStringWithShadow(line.text, 0, 0, line.color);
+            GlStateManager.popMatrix();
         }
     }
 
     private void drawRect(int left, int top, int right, int bottom, int color) {
         net.minecraft.client.gui.Gui.drawRect(left, top, right, bottom, color);
+    }
+
+    private void drawThinBorder(int left, int top, int right, int bottom, int color) {
+        int step = 4;
+
+        for (int x = left; x < right; x += step * 2) {
+            drawRect(x, top, x + step, top + 1, color);
+            drawRect(x, bottom - 1, x + step, bottom, color);
+        }
+
+        for (int y = top; y < bottom; y += step * 2) {
+            drawRect(left, y, left + 1, y + step, color);
+            drawRect(right - 1, y, right, y + step, color);
+        }
+    }
+
+    private static class ColoredLine {
+        public final String text;
+        public final int color;
+
+        public ColoredLine(String text, int color) {
+            this.text = text;
+            this.color = color;
+        }
     }
 }
