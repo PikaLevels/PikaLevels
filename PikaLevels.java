@@ -38,13 +38,11 @@ public class PikaLevels {
     public void init(FMLInitializationEvent event) {
         MinecraftForge.EVENT_BUS.register(this);
         MinecraftForge.EVENT_BUS.register(new RenderHandler());
-        System.out.println("PikaLevels mod loaded!");
-    }
 
-    @Mod.EventHandler
-    public void onServerStart(FMLServerStartingEvent event) {
-        event.registerServerCommand(new com.notthatlonely.pikalevels.commands.LevelToggleCommand());
-        event.registerServerCommand(new com.notthatlonely.pikalevels.commands.LeaderboardToggleCommand());
+        net.minecraftforge.client.ClientCommandHandler.instance.registerCommand(new com.notthatlonely.pikalevels.commands.LevelToggleCommand());
+        net.minecraftforge.client.ClientCommandHandler.instance.registerCommand(new com.notthatlonely.pikalevels.commands.LeaderboardToggleCommand());
+
+        System.out.println("PikaLevels mod loaded!");
     }
 
     @SubscribeEvent
@@ -55,7 +53,7 @@ public class PikaLevels {
             RenderHandler.toggleEnabled();
             boolean enabled = RenderHandler.isEnabled();
             if (mc.thePlayer != null) {
-                mc.thePlayer.addChatMessage(new ChatComponentText("Pika Levels display is now " + (enabled ? "§aENABLED" : "§cDISABLED")));
+                mc.thePlayer.addChatMessage(new ChatComponentText("Pika Levels display is now " + (enabled ? " aENABLED" : " cDISABLED")));
             }
             System.out.println("[PikaLevels] Levels display toggled: " + (enabled ? "ENABLED" : "DISABLED"));
         }
@@ -64,7 +62,7 @@ public class PikaLevels {
             RenderHandler.toggleLeaderboard();
             boolean enabled = RenderHandler.isLeaderboardEnabled();
             if (mc.thePlayer != null) {
-                mc.thePlayer.addChatMessage(new ChatComponentText("Pika Levels leaderboard is now " + (enabled ? "§aENABLED" : "§cDISABLED")));
+                mc.thePlayer.addChatMessage(new ChatComponentText("Pika Levels leaderboard is now " + (enabled ? " aENABLED" : " cDISABLED")));
             }
             System.out.println("[PikaLevels] Leaderboard toggled: " + (enabled ? "ENABLED" : "DISABLED"));
         }
