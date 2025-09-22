@@ -1,22 +1,28 @@
 package com.notthatlonely.pikalevels.api;
 
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.URL;
-import javax.net.ssl.HttpsURLConnection;
 
 public class PikaClient {
+
     public static class Result {
         public final String playerLevel;
         public final String guildDisplay;
+        public final String rankName; // e.g. "Titan", "Elite", "VIP", or null if none
+        public final int rankColor; // color integer (e.g. 0xFFFFFF)
+        public final boolean nick;  // true if player not found in API
 
-        public Result(String playerLevel, String guildDisplay) {
+        public Result(String playerLevel, String guildDisplay, String rankName, int rankColor, boolean nick) {
             this.playerLevel = playerLevel;
             this.guildDisplay = guildDisplay;
+            this.rankName = rankName;
+            this.rankColor = rankColor;
+            this.nick = nick;
         }
     }
 
@@ -28,7 +34,14 @@ public class PikaClient {
             conn.setConnectTimeout(4000);
             conn.setReadTimeout(4000);
 
-            if (conn.getResponseCode() != 200) return null;
+            int responseCode = conn.getResponseCode();
+            if (responseCode == 404) {
+                // Player not found in API -> mark as nick
+                return new Result("N/A", "N/A", null, 0xAAAAAA, true);
+            }
+            if (responseCode != 200) {
+                return null; // Other error, treat as data not available yet
+            }
 
             BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
             StringBuilder sb = new StringBuilder();
@@ -42,6 +55,8 @@ public class PikaClient {
             // Default values
             String level = "N/A";
             String guild = "N/A";
+            String rankName = null;
+            int rankColor = 0xAAAAAA; // Default gray
 
             // Extract level
             if (root.has("rank")) {
@@ -62,11 +77,37 @@ public class PikaClient {
                 }
             }
 
-            return new Result(level, guild);
+            // Extract ranks
+            if (root.has("ranks") && root.get("ranks").isJsonArray() && root.getAsJsonArray("ranks").size() > 0) {
+                JsonObject firstRank = root.getAsJsonArray("ranks").get(0).getAsJsonObject();
+                if (firstRank.has("displayName") && !firstRank.get("displayName").isJsonNull()) {
+                    rankName = firstRank.get("displayName").getAsString();
+                }
+            }
+
+            // Determine color based on rankName
+            rankColor = getColorForRank(rankName);
+
+            return new Result(level, guild, rankName, rankColor, false);
 
         } catch (Exception e) {
             e.printStackTrace();
             return null;
+        }
+    }
+
+    private static int getColorForRank(String rankName) {
+        if (rankName == null) return 0xAAAAAA; // Gray for non-ranked
+
+        switch (rankName.toLowerCase()) {
+            case "titan":
+                return 0xFFFF55; // Yellow
+            case "elite":
+                return 0x55FFFF; // Cyan-ish
+            case "vip":
+                return 0x55FF55; // Green-ish
+            default:
+                return 0xAAAAAA; // Gray default
         }
     }
 }
