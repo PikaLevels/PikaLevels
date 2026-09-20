@@ -53,7 +53,7 @@ public class PikaLevels {
             RenderHandler.toggleEnabled();
             boolean enabled = RenderHandler.isEnabled();
             if (mc.thePlayer != null) {
-                mc.thePlayer.addChatMessage(new ChatComponentText("Pika Levels display is now " + (enabled ? " aENABLED" : " cDISABLED")));
+                mc.thePlayer.addChatMessage(new ChatComponentText("Pika Levels display is now " + (enabled ? " ENABLED" : " DISABLED")));
             }
             System.out.println("[PikaLevels] Levels display toggled: " + (enabled ? "ENABLED" : "DISABLED"));
         }
@@ -62,7 +62,7 @@ public class PikaLevels {
             RenderHandler.toggleLeaderboard();
             boolean enabled = RenderHandler.isLeaderboardEnabled();
             if (mc.thePlayer != null) {
-                mc.thePlayer.addChatMessage(new ChatComponentText("Pika Levels leaderboard is now " + (enabled ? " aENABLED" : " cDISABLED")));
+                mc.thePlayer.addChatMessage(new ChatComponentText("Pika Levels leaderboard is now " + (enabled ? " ENABLED" : " DISABLED")));
             }
             System.out.println("[PikaLevels] Leaderboard toggled: " + (enabled ? "ENABLED" : "DISABLED"));
         }
